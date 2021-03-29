@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<meta charset='utf-8'>
+<head>
+<title>scatterplot and histogram</title>
+<script src='https://d3js.org/d3.v4.js'></script>
+</head>
+
+<body>
+<h1>scatterplots and histograms on diamond dataset</h1>
+<div id='my_dataviz'></div>
+<script>
+var marginWhole = {top: 10, right: 10, bottom: 10, left: 10},
+    sizeWhole = 1000 - marginWhole.left - marginWhole.right
+
+var svg = d3.select('#my_dataviz')
+  .append('svg')
+    .attr('width', sizeWhole  + marginWhole.left + marginWhole.right)
+    .attr('height', sizeWhole  + marginWhole.top + marginWhole.bottom)
+  .append('g')
+    .attr('transform', 'translate(' + marginWhole.left + ',' + marginWhole.top + ')');
+
+d3.csv('diamonds.csv', function(data) {
+  var allVar = ['carat', 'depth', 'table', 'price']
+  var numVar = allVar.length
+  mar = 30
+  size = sizeWhole / numVar
+
+  var position = d3.scalePoint()
+    .domain(allVar)
+    .range([0, sizeWhole-size])
+  var color = d3.scaleOrdinal()
+    .domain(['Fair', 'Good', 'Very Good', 'Premium', 'Ideal'])
+    .range([ 'LightCoral', 'PeachPuff', 'LightSkyBlue', 'RoyalBlue', 'MediumOrchid'])
+
+  for (i in allVar){
+    for (j in allVar){
+      var var1 = allVar[i]
+      var var2 = allVar[j]
+      if (var1 === var2) { continue; }
+      xextent = d3.extent(data, function(d) { return +d[var1] })
+      var x = d3.scaleLinear()
+        .domain(xextent).nice()
+        .range([ 0, size-2*mar ]);
+      yextent = d3.extent(data, function(d) { return +d[var2] })
+      var y = d3.scaleLinear()
+        .domain(yextent).nice()
+        .range([ size-2*mar, 0 ]);
+
+      var tmp = svg
+        .append('g')
+        .attr('transform', 'translate(' + (position(var1)+mar) + ',' + (position(var2)+mar) + ')');
+      tmp.append('g')
+        .attr('transform', 'translate(' + 0 + ',' + (size-mar*2) + ')')
+        .call(d3.axisBottom(x).ticks(3))
+      tmp.append('g')
+        .call(d3.axisLeft(y).ticks(3))
+      tmp.selectAll('myCircles')
+        .data(data)
+        .enter()
+        .append('circle')
+        .attr('cx', function(d){ return x(+d[var1]) })
+        .attr('cy', function(d){ return y(+d[var2]) })
+        .attr('r', 1)
+        .attr('fill', function(d){ return color(d.cut)})
+    }
+  }
+
+  for (i in allVar){
+    for (j in allVar){
+      var var1 = allVar[i]
+      var var2 = allVar[j]
+      if (i != j) { continue; }
+      xextent = d3.extent(data, function(d) { return +d[var1] })
+      var x = d3.scaleLinear()
+        .domain(xextent).nice()
+        .range([ 0, size-2*mar ]);
+
+      var tmp = svg
+        .append('g')
+        .attr('transform', 'translate(' + (position(var1)+mar) + ',' + (position(var2)+mar) + ')');
+      tmp.append('g')
+        .attr('transform', 'translate(' + 0 + ',' + (size-mar*2) + ')')
+        .call(d3.axisBottom(x).ticks(3))
+      tmp.append('text')
+        .style('text-anchor', 'middle')
+        .text(allVar[i])
+
+      var histogram = d3.histogram()
+        .value(function(d) { return +d[var1]; })
+        .domain(x.domain())
+        .thresholds(x.ticks(15));
+
+      var bins = histogram(data);
+      var y = d3.scaleLinear()
+            .range([ size-2*mar, 0 ])
+            .domain([0, d3.max(bins, function(d) { return d.length; })]);
+
+      tmp.append('g')
+        .selectAll('rect')
+        .data(bins)
+        .enter()
+        .append('rect')
+        .attr('x', 1)
+        .attr('transform', function(d) { return 'translate(' + x(d.x0) + ',' + y(d.length) + ')'; })
+        .attr('width', function(d) { return x(d.x1) - x(d.x0); })
+        .attr('height', function(d) { return (size-2*mar) - y(d.length); })
+        .style('fill', '#b8b8b8')
+        .attr('stroke', 'white')
+    }
+  }
+})
+</script>
+</html>
