@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<meta charset='utf-8'>
+<head>
+<title>Exoplanets Discover Date</title>
+<script src='https://d3js.org/d3.v4.js'></script>
+<select id='selectButton'></select>
+</head>
+
+<body>
+<h1>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Exoplanets Discover Date</h1>
+<div id='my_dataviz'></div>
+<script>
+
+var margin = {top: 30, right: 50, bottom: 30, left: 50},
+    width = 600 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+var svg = d3.select('#my_dataviz')
+    .append('svg')
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+d3.csv('planets.csv', function(data) {
+    var allGroup = d3.map(data, function(d){return(d.planet_type)}).keys()
+    d3.select('#selectButton')
+        .selectAll('myOptions')
+        .data(allGroup)
+        .enter()
+        .append('option')
+        .text(function (d) {return d})
+        .attr('value', function (d) {return d})
+
+    var x = d3.scaleLinear()
+        .domain([1989, 2020])
+        .range([0, width])
+    svg.append('g')
+        .attr('transform', 'translate(0,' + height + ')')
+        .call(d3.axisBottom(x))
+
+    svg.append('text')
+        .text('year')
+        .attr('x', 540)
+        .attr('y', 340)
+        .attr('text-anchor', 'end')
+        .attr('font-size', '10')
+
+    var y = d3.scaleLinear()
+        .range([height, 0])
+        .domain([0, 0.16])
+    svg.append('g')
+        .call(d3.axisLeft(y))
+
+    var kde = kernelDensityEstimator(kernelEpanechnikov(5), x.ticks(140))
+    var density =  kde(data
+        .filter(function(d){return d.planet_type == 'Gas Giant'})
+        .map(function(d){return +d.discovery_date}))
+
+    var curve = svg.append('g')
+        .append('path')
+        .attr('class', 'mypath')
+        .datum(density)
+        .attr('fill', 'LightSteelBlue')
+        .attr('opacity', '.8')
+        .attr('stroke', 'black')
+        .attr('stroke-width', 1)
+        .attr('stroke-linejoin', 'round')
+        .attr('d', d3.area()
+            .x(function(d) {return x(d[0])})
+            .y0(y(0))
+            .y1(function(d) {return y(d[1])}))
+
+
+    function updateChart(selectedGroup) {
+        kde = kernelDensityEstimator(kernelEpanechnikov(5), x.ticks(40))
+        var density =  kde(data
+            .filter(function(d){return d.planet_type == selectedGroup})
+            .map(function(d){return +d.discovery_date}))
+        curve.datum(density)
+            .transition()
+            .duration(1000)
+            .attr('d', d3.area()
+                .x(function(d) {return x(d[0])})
+                .y0(y(0))
+                .y1(function(d) {return y(d[1])}))
+    }
+
+    d3.select('#selectButton').on('change', function(d){
+        selectedGroup = this.value
+        updateChart(selectedGroup)
+    })
+});
+
+function kernelDensityEstimator(kernel, X) {
+    return function(V) {
+        return X.map(function(x) {
+            return [x, d3.mean(V, function(v) { return kernel(x - v); })];
+        });
+    };
+}
+function kernelEpanechnikov(k) {
+    return function(v) {
+        return Math.abs(v /= k) <= 1 ? 0.75 * (1 - v * v) / k : 0;
+    };
+}
+
+</script>
+</body>
+</html>

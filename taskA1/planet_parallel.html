@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<meta charset='utf-8'>
+<head>
+<title>NASA Exoplanets</title>
+<script src='https://d3js.org/d3.v4.js'></script>
+<style>
+.axis {
+  opacity: 0.4;
+}
+.axis:hover {
+  opacity: 1;
+}
+</style>
+</head>
+
+<body>
+<h1>NASA Exoplanets Exploration</h1>
+<div id='my_dataviz'></div>
+
+<script>
+var margin = {top: 50, right: 120, bottom: 50, left: 50},
+    width = 1000 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var svg = d3.select('#my_dataviz')
+    .append('svg')
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+d3.csv('planets.csv', function(data) {
+    var color = d3.scaleOrdinal()
+        .domain(['Gas Giant', 'Neptune-like', 'Super Earth', 'Terrestrial', 'Unknown'])
+        .range(['LightSteelBlue', 'SandyBrown', 'Orchid', 'LimeGreen', 'black'])
+
+    dimensions = ['stellar_magnitude', 'light_years_from_earth', 'planet_density', 'radius', 'orbit_radius', 'mass']
+
+    var y = {}
+    for (i in dimensions) {
+        name = dimensions[i]
+        y[name] = d3.scaleLinear()
+            .domain([d3.min(data, (d) => parseFloat(d[name])),
+                d3.max(data, (d) => parseFloat(d[name]))])
+            .range([height, 0])
+    }
+
+    x = d3.scalePoint()
+        .domain(dimensions)
+        .range([0, width])
+
+    var highlight = function(d){
+        d3.selectAll('.line')
+            .transition()
+            .duration(200)
+            .style('stroke', 'lightgrey')
+            .style('opacity', '0.2')
+        d3.selectAll('.' + d['planet_type'])
+            .transition().duration(200)
+            .style('stroke', color(d['planet_type']))
+            .style('opacity', '1')
+    }
+
+    var doNotHighlight = function(d){
+        d3.selectAll('.line')
+            .transition()
+            .duration(200)
+            .delay(100)
+            .style('stroke', (d) => (color(d['planet_type'])))
+            .style('opacity', '1')
+    }
+
+    function path(d) {
+        return d3.line()(dimensions.map(function(p) {return [x(p), y[p](d[p])]}));
+    }
+
+    svg.selectAll('myPath')
+        .data(data)
+        .enter()
+        .append('path')
+        .attr('class', (d) => ('line ' + d['planet_type']))
+        .attr('d',  path)
+        .style('fill', 'none' )
+        .style('stroke', (d) => (color(d['planet_type'])))
+        .style('opacity', 0.5)
+        //.on('mouseover', highlight)
+        //.on('mouseleave', doNotHighlight )
+
+    svg.selectAll('myAxis')
+        data(dimensions)
+        .enter()
+        .append('g')
+        .attr('class', 'axis')
+        .attr('transform', function(d) {return 'translate(' + x(d) + ')'})
+        .each(function(d) { d3.select(this).call(d3.axisLeft().ticks(5).scale(y[d])); })
+        .append('text')
+        .style('text-anchor', 'middle')
+        .attr('y', -9)
+        .text((d) => (d))
+        .style('fill', 'black')
+
+    var data_legend = [{'name': 'Gas Giant', 'color': 'LightSteelBlue'}, {'name': 'Neptune-like', 'color': 'SandyBrown'}, {'name': 'Super Earth', 'color': 'Orchid'}, {'name': 'Terrestrial', 'color': 'LimeGreen'}, {'name': 'Unknown', 'color': 'black'}]
+
+    var legend = svg.selectAll('.legend') 
+        .data(data_legend)
+        .enter()
+        .append('g')
+        .attr('class', 'legend')
+        .attr('transform', function(d, i) { return 'translate(100,' + (i * 20) + ')'; })
+ 
+    legend.append('rect')
+        .attr('x', width - 25)
+        .attr('y', 12)
+        .attr('width', 40)
+        .attr('height', 1)
+        .style('fill', (d) => (d.color))
+ 
+    legend.append('text')
+        .attr('x', width - 30)
+        .attr('y', 15)
+        .style('text-anchor', 'end')
+        .attr('font-size', 10)
+        .text((d) => (d.name))
+
+})
+
+
+</script>
+</body>
+</html>
