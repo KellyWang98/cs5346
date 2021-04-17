@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<meta charset='utf-8'>
+<head>
+<title>Monthly Mean Average Temperature</title>
+<script src='https://d3js.org/d3.v4.js'></script>
+</head>
+
+<body>
+<h1>Monthly Mean Average Temperature of Each Year</h1>
+<div id='my_dataviz'></div>
+<script>
+var margin = {top: 10, right: 30, bottom: 30, left: 60},
+	width = 800 - margin.left - margin.right,
+	height = 400 - margin.top - margin.bottom;
+
+var svg = d3.select('#my_dataviz')
+	.append('svg')
+	.attr('width', width + margin.left + margin.right)
+	.attr('height', height + margin.top + margin.bottom)
+	.append('g')
+	.attr('transform','translate(' + margin.left + ',' + margin.top + ')');
+
+d3.csv('Hemisphere_temp.csv', function(data) {
+	var sumstat = d3.nest()
+		.key((d) => (d.Hemisphere))
+		.entries(data)
+
+	var x = d3.scaleLinear()
+		.domain(d3.extent(data, (d) => (d.Year)))
+		.range([0, width])
+	svg.append('g')
+		.attr('transform', 'translate(0,' + height + ')')
+		.call(d3.axisBottom(x).ticks(5))
+
+	svg.append('text')
+        .text('year')
+        .attr('x', 740)
+        .attr('y', 360)
+        .attr('text-anchor', 'end')
+        .attr('font-size', '12')
+
+	var y = d3.scaleLinear()
+		.domain([d3.min(data, (d) => parseFloat(d['J-D'])),
+			d3.max(data, (d) => parseFloat(d['J-D']))])
+		.range([height, 0])
+	svg.append('g')
+		.call(d3.axisLeft(y))
+
+	var res = sumstat.map((d) => (d.key))
+	var color = d3.scaleOrdinal()
+		.domain(['Northern', 'Southern'])
+		.range(['LightSkyBlue','Gold'])
+
+	svg.selectAll('.line')
+		.data(sumstat)
+		.enter()
+		.append('path')
+		.attr('fill', 'none')
+		.attr('stroke', (d) => (color(d.key)))
+		.attr('stroke-width', 1.5)
+		.attr('d', function(d){
+			return d3.line()
+					.x((d) => (x(d.Year)))
+					.y((d) => (y(parseFloat(d['J-D']))))
+					(d.values)
+		})
+
+	var data_legend = [{'name': 'Northern', 'color': 'LightSkyBlue'}, {'name': 'Southern', 'color': 'Gold'}]
+
+	var legend = svg.selectAll('.legend') 
+		.data(data_legend)
+		.enter()
+		.append('g')
+		.attr('class', 'legend')
+		.attr('transform', function(d, i) { return 'translate(-620,' + (i * 20) + ')'; })
+ 
+	legend.append('rect')
+		.attr('x', width - 25)
+		.attr('y', 12)
+		.attr('width', 40)
+		.attr('height', 1)
+		.style('fill', (d) => (d.color))
+ 
+	legend.append('text')
+		.attr('x', width - 30)
+		.attr('y', 15)
+		.style('text-anchor', 'end')
+		.attr('font-size', 10)
+		.text((d) => (d.name))
+
+})
+
+</script>
+</body>
+</html>
